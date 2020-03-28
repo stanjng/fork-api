@@ -5,13 +5,16 @@ const recipeSchema = new mongoose.Schema({
     type: Number,
     require: true
   },
+  mealType: {
+    type: String,
+    require: true
+  },
   recipeTitle: {
     type: String,
     require: true
   },
   recipeAuthor: {
-    type: String,
-    require: true
+    type: String
   },
   recipeImage: {
     type: String,
@@ -23,8 +26,7 @@ const recipeSchema = new mongoose.Schema({
   },
   recipeSteps: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Step',
-    required: true
+    ref: 'Step'
   }],
   owner: {
     type: mongoose.Schema.Types.ObjectId,
