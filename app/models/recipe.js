@@ -13,9 +13,7 @@ const recipeSchema = new mongoose.Schema({
     type: String,
     require: true
   },
-  recipeAuthor: {
-    type: String
-  },
+  recipeAuthor: String,
   recipeImage: {
     type: String,
     require: true
@@ -25,8 +23,28 @@ const recipeSchema = new mongoose.Schema({
     require: true
   },
   recipeSteps: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Step'
+    stepNumber: {
+      type: Number,
+      required: true
+    },
+    stepText: {
+      type: String,
+      required: true
+    }
+  }],
+  recipeIngredients: [{
+    ingredientName: {
+      type: String,
+      required: true
+    },
+    ingredientAmount: {
+      type: Number,
+      required: true
+    },
+    ingredientUnit: {
+      type: String,
+      required: true
+    }
   }],
   owner: {
     type: mongoose.Schema.Types.ObjectId,
