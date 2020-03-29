@@ -30,6 +30,7 @@ const router = express.Router()
 // INDEX /recipes
 router.get('/recipes', requireToken, (req, res, next) => {
   Recipe.find()
+    .populate('recipeSteps')
     .then(recipes => {
       // `recipes` will be an array of Mongoose documents
       // we want to convert each one to a POJO, so we use `.map` to
@@ -40,6 +41,19 @@ router.get('/recipes', requireToken, (req, res, next) => {
     .then(recipes => res.status(200).json({
       recipes
     }))
+    // if an error occurs, pass it to the handler
+    .catch(next)
+})
+
+// SHOW
+// GET /recipes/5a7db6c74d55bc51bdf39793
+router.get('/recipes/:id', requireToken, (req, res, next) => {
+  // req.params.id will be set based on the `:id` in the route
+  Recipe.findById(req.params.id)
+    .populate('recipeSteps')
+    .then(handle404)
+    // if `findById` is succesful, respond with 200 and "topic" JSON
+    .then(topic => res.status(200).json({ topic: topic.toObject() }))
     // if an error occurs, pass it to the handler
     .catch(next)
 })
