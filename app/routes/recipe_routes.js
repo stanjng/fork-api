@@ -5,6 +5,7 @@ const passport = require('passport')
 
 // pull in Mongoose recipes model
 const Recipe = require('../models/recipe.js')
+const Mealplan = require('../models/mealplan.js')
 
 // this is a collection of methods that help us detect situations when we need
 // to throw a custom error
@@ -27,16 +28,10 @@ const requireToken = passport.authenticate('bearer', { session: false })
 // instantiate a router (mini app that only handles routes)
 const router = express.Router()
 
-// INDEX /recipes
-router.get('/recipes', requireToken, (req, res, next) => {
-  Recipe.find()
-    .then(recipes => {
-      // `recipes` will be an array of Mongoose documents
-      // we want to convert each one to a POJO, so we use `.map` to
-      // apply `.toObject` to each one
-      return recipes.map(recipe => recipe.toObject())
-    })
-    // respond with status 200 and JSON of the recipes
+// INDEX all recipes of a mealplan
+router.get('/mealplans/:id/recipes', requireToken, (req, res, next) => {
+  Mealplan.findById(req.params.id)
+    .then(mealplan => mealplan.recipes.map(recipe => recipe.toObject()))
     .then(recipes => res.status(200).json({
       recipes
     }))
@@ -44,46 +39,56 @@ router.get('/recipes', requireToken, (req, res, next) => {
     .catch(next)
 })
 
-// SHOW
-// GET /recipes/5a7db6c74d55bc51bdf39793
-router.get('/recipes/:id', requireToken, (req, res, next) => {
-  // req.params.id will be set based on the `:id` in the route
-  Recipe.findById(req.params.id)
-    .populate('recipeSteps')
-    .then(handle404)
-    // if `findById` is succesful, respond with 200 and "topic" JSON
-    .then(topic => res.status(200).json({ topic: topic.toObject() }))
-    // if an error occurs, pass it to the handler
-    .catch(next)
-})
+// // SHOW
+// // GET /mealplans/:id/recipes/
+// router.get('/mealplans/:id/recipes/:id', requireToken, (req, res, next) => {
+//   // req.params.id will be set based on the `:id` in the route
+//   Recipe.findById(req.params.id)
+//     .then(handle404)
+//     // if `findById` is succesful, respond with 200 and "topic" JSON
+//     .then(topic => res.status(200).json({ topic: topic.toObject() }))
+//     // if an error occurs, pass it to the handler
+//     .catch(next)
+// })
 
-// SHOW recipes for certain mealplans
-router.get('/recipes', requireToken, (req, res, next) => {
-  console.log(req.query)
+// SHOW single recipe from a mealplan
+router.get('/recipes/:rid', requireToken, (req, res, next) => {
   // req.params.id will be set based on the `:id` in the route
-  Recipe.find({ mealPlanId: req.query.mealPlanId })
-    .then(recipes => {
-      // `recipes` will be an array of Mongoose documents
-      // we want to convert each one to a POJO, so we use `.map` to
-      // apply `.toObject` to each one
-      return recipes.map(recipe => recipe.toObject())
-    })
-    .then(recipes => res.status(200).json({ recipes }))
+  Recipe.findById(req.params.rid)
+    .then(recipe => res.status(200).json({ recipe: recipe }))
     // if an error occurs, pass it to the handler
     .catch(next)
 })
 
 // CREATE
-// POST /recipes
-router.post('/recipes', requireToken, (req, res, next) => {
+// POST /mealplans/:id/recipes
+router.post('/mealplans/:id/recipes', requireToken, (req, res, next) => {
   // assigns the user id to the owner property within recipe, so recipe will be
   // assigned to the proper user account
-  req.body.recipe.owner = req.user.id
+  console.log(req.user.id)
+  req.body.owner = req.user.id
 
+  // non-promise chain recipe store
+  let tempRecipe
   Recipe.create(req.body.recipe)
-    // respond to succesful `create` with status 201 and JSON of new "recipe"
+    // take created recipe that has data + mealplan id
     .then(recipe => {
-      res.status(201).json({ recipe: recipe.toObject() })
+      // store created recipe in temp variable
+      tempRecipe = recipe
+      // return specific mealplan recipe belongs to using mealplan_id
+      return Mealplan.findById(req.params.id)
+    })
+    //
+    // take the returned corresponding mealplan and push temp created recipe into recipes array
+    .then(mealplan => {
+      // push into recipes array of corresponding mealplan
+      mealplan.recipes.push(tempRecipe)
+      // save mealplan
+      return mealplan.save()
+    })
+    // respond to succesful `create` with status 201 and JSON of new "question"
+    .then(mealplan => {
+      res.status(201).json({ mealplan: mealplan.toObject() })
     })
     // if an error occurs, pass it off to our error handler
     // the error handler needs the error message and the `res` object so that it
@@ -91,9 +96,9 @@ router.post('/recipes', requireToken, (req, res, next) => {
     .catch(next)
 })
 
-// DELETE /recipes/5a7db6c74d55bc51bdf39793
-router.delete('/recipes/:id', requireToken, (req, res, next) => {
-  Recipe.findById(req.params.id)
+// DELETE /mealplans/:id/recipes/5a7db6c74d55bc51bdf39793
+router.delete('/mealplans/:id/recipes/:rid', requireToken, (req, res, next) => {
+  Recipe.findById(req.params.rid)
     .then(handle404)
     .then(recipe => {
       // throw an error if current user doesn't own `recipe`
