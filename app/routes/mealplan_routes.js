@@ -61,10 +61,9 @@ router.get('/mealplans/:id', requireToken, (req, res, next) => {
 router.post('/mealplans', requireToken, (req, res, next) => {
   // assigns the user id to the owner property within recipe, so recipe will be
   // assigned to the proper user account
-  req.body.mealplan.owner = req.user.id
-  console.log(req.body.owner)
+  req.body.owner = req.user.id
 
-  Mealplan.create(req.body.mealplan)
+  Mealplan.create(req.body)
     // respond to succesful `create` with status 201 and JSON of new "recipe"
     .then(mealplan => {
       res.status(201).json({ mealplan: mealplan.toObject() })
@@ -93,6 +92,22 @@ router.patch('/mealplans/:id', requireToken, removeBlanks, (req, res, next) => {
       return mealplan.updateOne(req.body.mealplan)
     })
     // if that succeeded, return 204 and no JSON
+    .then(() => res.sendStatus(204))
+    // if an error occurs, pass it to the handler
+    .catch(next)
+})
+
+// DELETE /mealplans/:id/recipes/5a7db6c74d55bc51bdf39793
+router.delete('/mealplans/:id', requireToken, (req, res, next) => {
+  Mealplan.findById(req.params.id)
+    .then(handle404)
+    .then(mealplan => {
+      // throw an error if current user doesn't own `mealplan`
+      requireOwnership(req, mealplan)
+      // delete the mealplan ONLY IF the above didn't throw
+      mealplan.deleteOne()
+    })
+    // send back 204 and no content if the deletion succeeded
     .then(() => res.sendStatus(204))
     // if an error occurs, pass it to the handler
     .catch(next)

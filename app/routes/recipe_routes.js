@@ -31,7 +31,8 @@ const router = express.Router()
 // INDEX all recipes of a mealplan
 router.get('/mealplans/:id/recipes', requireToken, (req, res, next) => {
   Mealplan.findById(req.params.id)
-    .then(mealplan => mealplan.recipes.map(recipe => recipe.toObject()))
+    .populate('recipes')
+    .then(mealplan => mealplan.recipes.map(r => r.toObject()))
     .then(recipes => res.status(200).json({
       recipes
     }))
@@ -52,7 +53,7 @@ router.get('/mealplans/:id/recipes', requireToken, (req, res, next) => {
 // })
 
 // SHOW single recipe from a mealplan
-router.get('/recipes/:rid', requireToken, (req, res, next) => {
+router.get('/mealplans/:id/recipes/:rid', requireToken, (req, res, next) => {
   // req.params.id will be set based on the `:id` in the route
   Recipe.findById(req.params.rid)
     .then(recipe => res.status(200).json({ recipe: recipe }))
@@ -65,18 +66,17 @@ router.get('/recipes/:rid', requireToken, (req, res, next) => {
 router.post('/mealplans/:id/recipes', requireToken, (req, res, next) => {
   // assigns the user id to the owner property within recipe, so recipe will be
   // assigned to the proper user account
-  console.log(req.user.id)
   req.body.owner = req.user.id
 
   // non-promise chain recipe store
   let tempRecipe
-  Recipe.create(req.body.recipe)
+  Recipe.create(req.body)
     // take created recipe that has data + mealplan id
     .then(recipe => {
       // store created recipe in temp variable
       tempRecipe = recipe
       // return specific mealplan recipe belongs to using mealplan_id
-      return Mealplan.findById(req.params.id)
+      return Mealplan.findById(req.params.id).populate('recipes')
     })
     //
     // take the returned corresponding mealplan and push temp created recipe into recipes array
